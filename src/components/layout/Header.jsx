@@ -1,12 +1,38 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Menu, X, User, LogOut } from "lucide-react";
 import useAuthStore from "../../store/useAuthStore";
 
+/**
+ * Header Component
+ * Main navigation header with authentication-aware UI
+ *
+ * Best Practices:
+ * - Subscribes to auth state via Zustand (reactive updates)
+ * - Conditionally renders auth-dependent navigation items
+ * - Handles logout with proper navigation
+ */
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { isAuthenticated, logout } = useAuthStore();
+
+  // Subscribe to auth state - component re-renders when auth changes
+  // This ensures UI updates immediately when user logs out/in
+  const { user, token, logout, isAuthenticated } = useAuthStore();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Reactive authentication check - evaluated on every render
+  const authenticated = isAuthenticated();
+
+  // Check if we're on a dashboard route
+  const isDashboardRoute =
+    location.pathname.startsWith("/dashboard") ||
+    location.pathname.startsWith("/ai-writer") ||
+    location.pathname.startsWith("/image-generator") ||
+    location.pathname.startsWith("/chatbot") ||
+    location.pathname.startsWith("/ai-search") ||
+    location.pathname.startsWith("/history") ||
+    location.pathname.startsWith("/profile");
 
   const handleLogout = async () => {
     await logout();
@@ -14,11 +40,22 @@ const Header = () => {
   };
 
   return (
-    <header className="bg-white shadow-md sticky top-0 z-50">
-      <nav className="container mx-auto px-4 py-4">
-        <div className="flex justify-between items-center">
+    <header className="bg-white shadow-md sticky top-0 z-50 h-16">
+      <nav
+        className={`${
+          isDashboardRoute ? "lg:ml-64" : "container"
+        } mx-auto px-4 h-full transition-all duration-300`}
+      >
+        <div
+          className={`flex ${
+            isDashboardRoute ? "" : "justify-between"
+          } items-center h-full`}
+        >
           {/* Logo */}
-          <Link to="/" className="flex items-center space-x-2 group">
+          <Link
+            to={isDashboardRoute ? "/dashboard" : "/"}
+            className="flex items-center space-x-2 group"
+          >
             <div className="w-10 h-10 bg-gradient-to-br from-primary-600 to-purple-600 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
               <span className="text-white font-bold text-xl">SG</span>
             </div>
@@ -28,7 +65,11 @@ const Header = () => {
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-8">
+          <div
+            className={`hidden md:flex items-center ${
+              isDashboardRoute ? "ml-auto" : ""
+            } space-x-8`}
+          >
             <Link to="/" className="hover:text-primary-600 transition-colors">
               Home
             </Link>
@@ -39,7 +80,7 @@ const Header = () => {
               Pricing
             </Link>
 
-            {isAuthenticated() ? (
+            {authenticated ? (
               <>
                 <Link
                   to="/dashboard"
@@ -94,7 +135,7 @@ const Header = () => {
             <Link to="/pricing" className="block py-2 hover:text-primary-600">
               Pricing
             </Link>
-            {isAuthenticated() ? (
+            {authenticated ? (
               <>
                 <Link
                   to="/dashboard"

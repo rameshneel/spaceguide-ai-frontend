@@ -45,13 +45,18 @@ api.interceptors.response.use(
       requestUrl.includes("/auth/tokens/refresh") ||
       requestUrl.includes("/auth/refresh");
     const isLogoutRequest = requestUrl.includes("/auth/logout");
+    const isLoginRequest = requestUrl.includes("/auth/login");
+    const isRegisterRequest = requestUrl.includes("/auth/register");
 
     // Handle 401 unauthorized - automatically refresh token
+    // BUT: If refresh endpoint itself returns 401, immediately logout
     if (
       error.response?.status === 401 &&
       !originalRequest._retry &&
       !isRefreshRequest &&
-      !isLogoutRequest
+      !isLogoutRequest &&
+      !isLoginRequest &&
+      !isRegisterRequest
     ) {
       originalRequest._retry = true;
 
@@ -92,19 +97,58 @@ api.interceptors.response.use(
 
         // If refresh endpoint itself returns 401, user needs to login
         if (refreshError.response?.status === 401) {
-          console.log("🔄 Refresh token expired. Redirecting to login...");
+          console.log(
+            "🔄 Refresh token expired. Logging out and redirecting to login..."
+          );
         }
 
-        // Clear auth store
+        // IMMEDIATELY clear auth store and redirect
+        // Use logout method from store for proper cleanup
         try {
-          const { useAuthStore } = await import("../store/useAuthStore");
-          await useAuthStore.getState().logout();
+          const { default: useAuthStore } = await import(
+            "../store/useAuthStore"
+          );
+          const store = useAuthStore.getState();
+
+          // Clear state using store's clearAuth method (best practice)
+          // This ensures proper cleanup and triggers component re-renders
+          if (store.clearAuth) {
+            store.clearAuth();
+          } else {
+            // Fallback: Use Zustand's setState
+            useAuthStore.setState({ user: null, token: null });
+          }
+
+          // Try logout API call to clear backend cookies
+          // Wrap in try-catch since token might already be expired
+          try {
+            await store.logout();
+          } catch (logoutError) {
+            // Expected if token already expired - just log and continue
+            console.log(
+              "Logout API call skipped (token expired):",
+              logoutError.message
+            );
+          }
         } catch (e) {
           console.error("Failed to clear auth store:", e);
+          // Fallback: Clear localStorage directly if store access fails
+          try {
+            localStorage.removeItem("auth-storage");
+          } catch (storageError) {
+            console.error("Failed to clear localStorage:", storageError);
+          }
         }
 
-        // Redirect to login
-        if (!window.location.pathname.includes("/login")) {
+        // Redirect to login page using window.location for immediate effect
+        // This ensures complete page reload and clears any stale state
+        const currentPath = window.location.pathname;
+        if (
+          !currentPath.includes("/login") &&
+          !currentPath.includes("/register")
+        ) {
+          // Use window.location.href for hard redirect (best practice for auth failures)
+          // This ensures complete cleanup of React state and routing
           window.location.href = "/login";
         }
 
@@ -128,5 +172,82 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+/**
+ * Refresh token helper function (reusable for fetch requests)
+ * @returns {Promise<boolean>} Returns true if refresh successful, false otherwise
+ */
+export const refreshToken = async () => {
+  const API_BASE_URL =
+    import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+
+  try {
+    const refreshResponse = await axios.post(
+      `${API_BASE_URL}/auth/tokens/refresh`,
+      {},
+      {
+        withCredentials: true,
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    if (refreshResponse.status === 200 || refreshResponse.data?.success) {
+      console.log("✅ Token refresh successful");
+      // Small delay to ensure cookies are set
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      return true;
+    }
+    return false;
+  } catch (refreshError) {
+    console.error("❌ Token refresh failed:", refreshError);
+
+    // If refresh endpoint itself returns 401, immediately logout
+    if (refreshError.response?.status === 401) {
+      console.log("🔄 Refresh token expired. Logging out and redirecting...");
+
+      try {
+        const { default: useAuthStore } = await import("../store/useAuthStore");
+        const store = useAuthStore.getState();
+
+        // Clear state using store's clearAuth method (best practice)
+        if (store.clearAuth) {
+          store.clearAuth();
+        } else {
+          useAuthStore.setState({ user: null, token: null });
+        }
+
+        // Try logout API call to clear backend cookies
+        try {
+          await store.logout();
+        } catch (logoutError) {
+          console.log(
+            "Logout API call skipped (token expired):",
+            logoutError.message
+          );
+        }
+      } catch (e) {
+        console.error("Failed to clear auth store:", e);
+        try {
+          localStorage.removeItem("auth-storage");
+        } catch (storageError) {
+          console.error("Failed to clear localStorage:", storageError);
+        }
+      }
+
+      // Force redirect to login page
+      const currentPath = window.location.pathname;
+      if (
+        !currentPath.includes("/login") &&
+        !currentPath.includes("/register")
+      ) {
+        window.location.href = "/login";
+      }
+    }
+
+    return false;
+  }
+};
 
 export default api;

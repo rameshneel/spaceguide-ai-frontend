@@ -84,8 +84,17 @@ const Footer = () => {
 
         <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
           <p>
-            &copy; 2025 SpaceGuideAI. All rights reserved. Crafted by
-            WebProxima.
+            &copy; 2025 SpaceGuideAI. All rights reserved. Designed & developed
+            with 💙 by{" "}
+            <a
+              href="https://neelnetworks.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-400 hover:underline"
+            >
+              Neel Networks
+            </a>
+            .
           </p>
         </div>
       </div>

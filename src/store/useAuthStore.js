@@ -83,6 +83,11 @@ const useAuthStore = create(
       isAuthenticated: () => {
         return !!get().token && !!get().user;
       },
+
+      // Clear auth state (helper for external use - e.g., API interceptors)
+      clearAuth: () => {
+        set({ user: null, token: null, error: null });
+      },
     }),
     {
       name: "auth-storage",

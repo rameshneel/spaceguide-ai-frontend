@@ -1,4 +1,4 @@
-import api from "./api";
+import api, { refreshToken } from "./api";
 
 export const aiServices = {
   // Get AI service options (content types, tones, lengths)
@@ -17,38 +17,76 @@ export const aiServices = {
   generateTextStream: async (data, onChunk, onComplete, onError) => {
     const API_BASE_URL =
       import.meta.env.VITE_API_URL || "http://localhost:5000/api";
-    const token = localStorage.getItem("accessToken");
 
-    try {
+    // Helper function to make fetch request with retry logic
+    const makeRequest = async (retryCount = 0) => {
+      const token = localStorage.getItem("accessToken");
+
       const response = await fetch(
         `${API_BASE_URL}/services/text/generate-stream`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
           body: JSON.stringify(data),
           credentials: "include", // For cookies
         }
       );
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      // Handle 401 Unauthorized - try to refresh token once
+      if (response.status === 401 && retryCount === 0) {
+        console.log(
+          "🔄 401 Error in SSE request. Attempting to refresh token..."
+        );
+
+        const refreshSuccess = await refreshToken();
+
+        if (refreshSuccess) {
+          // Retry the request once after successful refresh
+          console.log("🔄 Retrying SSE request after token refresh...");
+          return makeRequest(1); // Retry with retryCount = 1
+        } else {
+          // Refresh failed, throw error
+          const errorData = await response.json().catch(() => ({
+            message: "Access token expired. Please login again.",
+          }));
+          throw new Error(errorData.message || "Authentication failed");
+        }
       }
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({
+          message: `HTTP error! status: ${response.status}`,
+        }));
+        throw new Error(
+          errorData.message || `HTTP error! status: ${response.status}`
+        );
+      }
+
+      return response;
+    };
+
+    try {
+      const response = await makeRequest();
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
+      let buffer = "";
 
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
 
-        const chunk = decoder.decode(value);
-        const lines = chunk.split("\n");
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+
+        // Keep the last incomplete line in buffer
+        buffer = lines.pop() || "";
 
         for (const line of lines) {
-          if (line.startsWith("data: ")) {
+          if (line.trim().startsWith("data: ")) {
             try {
               const data = JSON.parse(line.slice(6)); // Remove "data: " prefix
 
@@ -62,7 +100,8 @@ export const aiServices = {
                 return;
               }
 
-              // Regular chunk
+              // Regular chunk - process immediately (best practice)
+              // Throttling happens at animation level, not here
               if (data.chunk !== undefined) {
                 onChunk?.(data.chunk, data.partial || "");
               }

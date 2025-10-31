@@ -14,6 +14,8 @@ export const ROUTES = {
   AI_WRITER: "/ai-writer",
   IMAGE_GENERATOR: "/image-generator",
   CHATBOT: "/chatbot",
+  AI_SEARCH: "/ai-search",
+  HISTORY: "/history",
   PROFILE: "/profile",
 
   // Protected routes - Admin

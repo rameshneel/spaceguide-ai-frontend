@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Sparkles, History, Download, TrendingUp } from "lucide-react";
+import { Sparkles, History, Download, Settings } from "lucide-react";
 import { toast } from "react-hot-toast";
 
 const QuickActions = () => {
@@ -21,7 +21,7 @@ const QuickActions = () => {
           </div>
         </Link>
         <Link
-          to="#"
+          to="/history"
           className="flex items-center gap-3 p-4 bg-white rounded-lg hover:shadow-lg transition-shadow"
         >
           <History className="w-6 h-6 text-purple-600" />
@@ -41,13 +41,13 @@ const QuickActions = () => {
           </div>
         </button>
         <Link
-          to="/pricing"
+          to="/profile"
           className="flex items-center gap-3 p-4 bg-white rounded-lg hover:shadow-lg transition-shadow"
         >
-          <TrendingUp className="w-6 h-6 text-orange-600" />
+          <Settings className="w-6 h-6 text-indigo-600" />
           <div>
-            <h4 className="font-semibold">Upgrade Plan</h4>
-            <p className="text-xs text-gray-600">Get more features</p>
+            <h4 className="font-semibold">Settings</h4>
+            <p className="text-xs text-gray-600">Manage account</p>
           </div>
         </Link>
       </div>

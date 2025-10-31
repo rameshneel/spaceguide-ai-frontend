@@ -2,13 +2,11 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import {
   Loader,
-  Settings,
   AlertTriangle,
   CheckCircle,
   Calendar,
   Bell,
 } from "lucide-react";
-import Header from "../components/layout/Header";
 import useAuthStore from "../store/useAuthStore";
 import { authService } from "../services/auth";
 
@@ -20,6 +18,7 @@ import UsageCharts from "../components/dashboard/UsageCharts";
 import ServicesGrid from "../components/dashboard/ServicesGrid";
 import RecentActivity from "../components/dashboard/RecentActivity";
 import QuickActions from "../components/dashboard/QuickActions";
+import SubscriptionCard from "../components/dashboard/SubscriptionCard";
 
 const Dashboard = () => {
   const [loading, setLoading] = useState(true);
@@ -181,70 +180,52 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Header />
-
-      <div className="container mx-auto px-4 py-8">
-        {/* Welcome Section with Quick Actions */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            <div>
-              <h1 className="text-4xl font-bold mb-2">
-                Welcome back{user?.firstName ? `, ${user.firstName}` : ""}! 👋
-              </h1>
-              <p className="text-gray-600">
-                Current plan:{" "}
-                <span className="font-semibold text-primary-600 capitalize">
-                  {user?.subscription?.type || "Free"}
-                </span>
-              </p>
-            </div>
-            <div className="flex gap-3 flex-wrap">
-              <Link to="/pricing" className="btn-primary">
-                Upgrade Plan
-              </Link>
-              <Link
-                to="/profile"
-                className="btn-secondary flex items-center gap-2"
-              >
-                <Settings className="w-4 h-4" />
-                Settings
-              </Link>
-            </div>
-          </div>
+    <div className="max-w-7xl mx-auto">
+      {/* Welcome Section */}
+      <div className="mb-8">
+        <div>
+          <h1 className="text-4xl font-bold mb-3">
+            Welcome back{user?.firstName ? `, ${user.firstName}` : ""}! 👋
+          </h1>
+          <p className="text-gray-600 text-lg">
+            Manage your AI services and subscriptions
+          </p>
         </div>
-
-        {/* Alerts & Notifications */}
-        <AlertsSection alerts={alerts} />
-
-        {/* Usage Stats Cards */}
-        <UsageStatsCards
-          detailedUsage={detailedUsage}
-          recentActivityCount={recentActivity.length}
-        />
-
-        {/* Detailed Usage Breakdown with Progress Bars */}
-        <UsageBreakdown
-          usage={detailedUsage?.usage}
-          timeFilter={timeFilter}
-          onTimeFilterChange={setTimeFilter}
-        />
-
-        {/* Usage Charts */}
-        <UsageCharts
-          usageChartData={usageChartData}
-          serviceUsageData={serviceUsageData}
-        />
-
-        {/* Services Grid + Recent Activity */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
-          <ServicesGrid />
-          <RecentActivity recentActivity={recentActivity} />
-        </div>
-
-        {/* Quick Actions */}
-        <QuickActions />
       </div>
+
+      {/* Subscription Status Card - Professional & Clean */}
+      <SubscriptionCard />
+
+      {/* Alerts & Notifications */}
+      <AlertsSection alerts={alerts} />
+
+      {/* Usage Stats Cards */}
+      <UsageStatsCards
+        detailedUsage={detailedUsage}
+        recentActivityCount={recentActivity.length}
+      />
+
+      {/* Detailed Usage Breakdown with Progress Bars */}
+      <UsageBreakdown
+        usage={detailedUsage?.usage}
+        timeFilter={timeFilter}
+        onTimeFilterChange={setTimeFilter}
+      />
+
+      {/* Usage Charts */}
+      <UsageCharts
+        usageChartData={usageChartData}
+        serviceUsageData={serviceUsageData}
+      />
+
+      {/* Services Grid + Recent Activity */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+        <ServicesGrid />
+        <RecentActivity recentActivity={recentActivity} />
+      </div>
+
+      {/* Quick Actions */}
+      <QuickActions />
     </div>
   );
 };
