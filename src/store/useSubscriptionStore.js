@@ -25,9 +25,13 @@ const useSubscriptionStore = create((set, get) => ({
   fetchCurrentSubscription: async () => {
     try {
       set({ loading: true });
-      const data = await subscriptionService.getSubscription();
-      set({ currentSubscription: data.subscription, loading: false });
-      return data;
+      const response = await subscriptionService.getSubscription();
+      // Backend returns: { statusCode, data: { subscription, ... }, message, success }
+      // Extract subscription from nested data structure
+      const subscription =
+        response?.data?.subscription || response?.subscription || null;
+      set({ currentSubscription: subscription, loading: false });
+      return response;
     } catch (error) {
       set({ error: error.message, loading: false });
       throw error;

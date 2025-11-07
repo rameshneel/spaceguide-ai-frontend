@@ -10,6 +10,7 @@ import {
   User,
   Menu,
   X,
+  TrendingUp,
 } from "lucide-react";
 import { useState } from "react";
 import useAuthStore from "../../store/useAuthStore";
@@ -51,6 +52,11 @@ const Sidebar = ({ isMobile, onClose }) => {
       path: "/history",
     },
     {
+      name: "Upgrade Plans",
+      icon: <TrendingUp className="w-5 h-5" />,
+      path: "/upgrade-plans",
+    },
+    {
       name: "Settings",
       icon: <Settings className="w-5 h-5" />,
       path: "/profile",
@@ -80,6 +86,8 @@ const Sidebar = ({ isMobile, onClose }) => {
         className={`hidden lg:flex flex-col bg-white border-r border-gray-200 fixed left-0 top-16 h-[calc(100vh-4rem)] transition-all duration-300 z-40 ${
           isCollapsed ? "w-20" : "w-64"
         }`}
+        aria-label="Main navigation"
+        role="navigation"
       >
         {/* User Info */}
         <div
@@ -125,7 +133,9 @@ const Sidebar = ({ isMobile, onClose }) => {
                 }`}
                 title={isCollapsed ? item.name : ""}
               >
-                <span className="flex-shrink-0">{item.icon}</span>
+                <span className="flex-shrink-0" aria-hidden="true">
+                  {item.icon}
+                </span>
                 {!isCollapsed && <span className="text-sm">{item.name}</span>}
               </div>
             );
@@ -153,7 +163,9 @@ const Sidebar = ({ isMobile, onClose }) => {
                 }
                 title={isCollapsed ? item.name : ""}
               >
-                <span className="flex-shrink-0">{item.icon}</span>
+                <span className="flex-shrink-0" aria-hidden="true">
+                  {item.icon}
+                </span>
                 {!isCollapsed && <span className="text-sm">{item.name}</span>}
               </NavLink>
             );
@@ -165,8 +177,10 @@ const Sidebar = ({ isMobile, onClose }) => {
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}
             className="w-full flex items-center gap-3 px-4 py-2 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
+            aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            aria-expanded={!isCollapsed}
           >
-            <Menu className="w-5 h-5 flex-shrink-0" />
+            <Menu className="w-5 h-5 flex-shrink-0" aria-hidden="true" />
             {!isCollapsed && <span className="text-sm">Collapse</span>}
           </button>
         </div>
@@ -182,7 +196,11 @@ const Sidebar = ({ isMobile, onClose }) => {
           />
 
           {/* Sidebar */}
-          <aside className="fixed left-0 top-0 h-full w-64 bg-white shadow-xl z-50 overflow-y-auto">
+          <aside
+            className="fixed left-0 top-0 h-full w-64 bg-white shadow-xl z-50 overflow-y-auto"
+            aria-label="Mobile navigation"
+            role="navigation"
+          >
             {/* Mobile Header */}
             <div className="flex items-center justify-between p-4 border-b border-gray-200">
               <div className="flex items-center gap-3">
@@ -203,8 +221,9 @@ const Sidebar = ({ isMobile, onClose }) => {
               <button
                 onClick={onClose}
                 className="p-2 hover:bg-gray-100 rounded-lg"
+                aria-label="Close sidebar"
               >
-                <X className="w-5 h-5" />
+                <X className="w-5 h-5" aria-hidden="true" />
               </button>
             </div>
 
@@ -226,7 +245,9 @@ const Sidebar = ({ isMobile, onClose }) => {
                         : "cursor-pointer"
                     }`}
                   >
-                    <span className="flex-shrink-0">{item.icon}</span>
+                    <span className="flex-shrink-0" aria-hidden="true">
+                      {item.icon}
+                    </span>
                     <span className="text-sm">{item.name}</span>
                   </div>
                 );
@@ -253,7 +274,9 @@ const Sidebar = ({ isMobile, onClose }) => {
                       }`
                     }
                   >
-                    <span className="flex-shrink-0">{item.icon}</span>
+                    <span className="flex-shrink-0" aria-hidden="true">
+                      {item.icon}
+                    </span>
                     <span className="text-sm">{item.name}</span>
                   </NavLink>
                 );

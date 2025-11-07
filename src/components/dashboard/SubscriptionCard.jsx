@@ -38,13 +38,16 @@ const SubscriptionCard = () => {
 
         <div className="flex gap-3">
           {currentPlan === "free" ? (
-            <Link to="/pricing" className="btn-primary flex items-center gap-2">
+            <Link
+              to="/upgrade-plans"
+              className="btn-primary flex items-center gap-2"
+            >
               <TrendingUp className="w-4 h-4" />
               Upgrade Now
             </Link>
           ) : (
             <Link
-              to="/pricing"
+              to="/upgrade-plans"
               className="btn-secondary flex items-center gap-2"
             >
               Manage Plan
@@ -64,7 +67,7 @@ const SubscriptionCard = () => {
                 <span className="text-sm font-normal text-gray-500">/mo</span>
               </p>
               <Link
-                to="/pricing"
+                to="/upgrade-plans"
                 className="text-xs text-primary-600 hover:underline mt-1 inline-block"
               >
                 View Details →
@@ -77,7 +80,7 @@ const SubscriptionCard = () => {
                 <span className="text-sm font-normal text-gray-500">/mo</span>
               </p>
               <Link
-                to="/pricing"
+                to="/upgrade-plans"
                 className="text-xs text-primary-600 hover:underline mt-1 inline-block"
               >
                 View Details →

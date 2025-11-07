@@ -28,6 +28,12 @@ export const subscriptionService = {
     return response.data;
   },
 
+  // Get current subscription
+  getSubscription: async () => {
+    const response = await api.get("/subscription/current");
+    return response.data;
+  },
+
   // Get usage statistics
   getUsage: async (params = {}) => {
     const response = await api.get("/subscription/usage", { params });

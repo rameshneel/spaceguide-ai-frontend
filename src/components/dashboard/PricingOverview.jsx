@@ -4,31 +4,9 @@ import { Check, Loader, Sparkles } from "lucide-react";
 import useSubscriptionStore from "../../store/useSubscriptionStore";
 import useAuthStore from "../../store/useAuthStore";
 import { toast } from "react-hot-toast";
-
-// Fallback plans (same as Pricing page)
-const FALLBACK_PLANS = [
-  {
-    _id: "free",
-    name: "free",
-    displayName: "Free",
-    price: { monthly: 0 },
-    isPopular: false,
-  },
-  {
-    _id: "basic",
-    name: "basic",
-    displayName: "Basic",
-    price: { monthly: 29 },
-    isPopular: true,
-  },
-  {
-    _id: "pro",
-    name: "pro",
-    displayName: "Pro",
-    price: { monthly: 79 },
-    isPopular: false,
-  },
-];
+import logger from "../../utils/logger";
+import { TIMING } from "../../constants/timing";
+import { FALLBACK_PLANS } from "../../constants/subscription";
 
 const PricingOverview = () => {
   const { plans, fetchPlans, upgrade } = useSubscriptionStore();
@@ -48,7 +26,7 @@ const PricingOverview = () => {
         setUseFallback(true);
       }
     } catch (error) {
-      console.error("Failed to load plans:", error);
+      logger.error("Failed to load plans:", error);
       setUseFallback(true);
     } finally {
       setLoading(false);
@@ -78,10 +56,10 @@ const PricingOverview = () => {
         await getCurrentUser();
         toast.success("Subscription upgraded successfully! 🎉");
         // Refresh to show updated plan
-        setTimeout(() => window.location.reload(), 1000);
+        setTimeout(() => window.location.reload(), TIMING.PAGE_RELOAD_DELAY);
       }
     } catch (error) {
-      console.error("Upgrade error:", error);
+      logger.error("Upgrade error:", error);
       toast.error(
         error?.response?.data?.message || error?.message || "Failed to upgrade"
       );
@@ -116,7 +94,7 @@ const PricingOverview = () => {
           </p>
         </div>
         <Link
-          to="/pricing"
+          to="/upgrade-plans"
           className="text-sm text-primary-600 hover:underline font-medium"
         >
           View All Plans →

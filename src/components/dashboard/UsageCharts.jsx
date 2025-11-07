@@ -40,13 +40,13 @@ const UsageCharts = ({ usageChartData, serviceUsageData }) => {
         </ResponsiveContainer>
       </div>
 
-      {/* Service Distribution Pie Chart */}
-      {serviceUsageData && serviceUsageData.length > 0 && (
-        <div className="card">
-          <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
-            <PieChartIcon className="w-5 h-5 text-primary-600" />
-            Service Usage Distribution
-          </h3>
+      {/* Service Distribution Pie Chart - Always visible with empty state */}
+      <div className="card">
+        <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+          <PieChartIcon className="w-5 h-5 text-primary-600" />
+          Service Usage Distribution
+        </h3>
+        {serviceUsageData && serviceUsageData.length > 0 ? (
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
               <Pie
@@ -69,8 +69,16 @@ const UsageCharts = ({ usageChartData, serviceUsageData }) => {
               <Legend />
             </PieChart>
           </ResponsiveContainer>
-        </div>
-      )}
+        ) : (
+          <div className="flex flex-col items-center justify-center h-[300px] text-center">
+            <PieChartIcon className="w-16 h-16 text-gray-300 mb-4" />
+            <p className="text-gray-500 font-medium mb-2">No usage data yet</p>
+            <p className="text-sm text-gray-400 max-w-xs">
+              Start using AI services to see your usage distribution here
+            </p>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

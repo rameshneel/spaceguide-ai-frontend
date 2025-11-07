@@ -24,16 +24,20 @@ const RecentActivity = ({ recentActivity }) => {
           <History className="w-5 h-5 text-primary-600" />
           Recent Activity
         </h3>
-        <Link to="#" className="text-sm text-primary-600 hover:underline">
+        <Link
+          to="/history"
+          className="text-sm text-primary-600 hover:underline"
+        >
           View All
         </Link>
       </div>
-      <div className="space-y-3">
+      {/* Container that expands naturally with content - no max-height constraint */}
+      <div className="space-y-3 min-h-[200px]">
         {recentActivity && recentActivity.length > 0 ? (
           recentActivity.map((activity, index) => (
             <div
-              key={index}
-              className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg"
+              key={activity._id || activity.id || `activity-${index}`}
+              className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
             >
               <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
               <div className="flex-1 min-w-0">

@@ -17,6 +17,7 @@ export const ROUTES = {
   AI_SEARCH: "/ai-search",
   HISTORY: "/history",
   PROFILE: "/profile",
+  UPGRADE_PLANS: "/upgrade-plans",
 
   // Protected routes - Admin
   ADMIN_DASHBOARD: "/admin/dashboard",

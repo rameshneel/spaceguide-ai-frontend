@@ -6,7 +6,15 @@ export const authService = {
     const response = await api.post("/auth/register", data);
     // Backend returns: { statusCode, data: { user, accessToken, refreshToken }, message, success }
     // Extract the nested data object
-    return response.data.data || response.data;
+    const result = response.data.data || response.data;
+
+    // Store accessToken in localStorage for Socket.IO (even if using cookies for REST API)
+    // Socket.IO needs token in handshake, can't use httpOnly cookies
+    if (result.accessToken) {
+      localStorage.setItem("accessToken", result.accessToken);
+    }
+
+    return result;
   },
 
   // Login user
@@ -14,7 +22,15 @@ export const authService = {
     const response = await api.post("/auth/login", data);
     // Backend returns: { statusCode, data: { user, accessToken, refreshToken }, message, success }
     // Extract the nested data object
-    return response.data.data || response.data;
+    const result = response.data.data || response.data;
+
+    // Store accessToken in localStorage for Socket.IO (even if using cookies for REST API)
+    // Socket.IO needs token in handshake, can't use httpOnly cookies
+    if (result.accessToken) {
+      localStorage.setItem("accessToken", result.accessToken);
+    }
+
+    return result;
   },
 
   // Logout user

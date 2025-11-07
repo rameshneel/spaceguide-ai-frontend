@@ -91,10 +91,15 @@ const Header = () => {
                 <Link
                   to="/profile"
                   className="hover:text-primary-600 transition-colors"
+                  aria-label="User profile"
                 >
-                  <User className="w-5 h-5" />
+                  <User className="w-5 h-5" aria-hidden="true" />
                 </Link>
-                <button onClick={handleLogout} className="btn-secondary">
+                <button
+                  onClick={handleLogout}
+                  className="btn-secondary"
+                  aria-label="Logout"
+                >
                   Logout
                 </button>
               </>
@@ -117,18 +122,26 @@ const Header = () => {
           <button
             className="md:hidden"
             onClick={() => setIsMenuOpen(!isMenuOpen)}
+            aria-label={isMenuOpen ? "Close menu" : "Open menu"}
+            aria-expanded={isMenuOpen}
+            aria-controls="mobile-navigation"
           >
             {isMenuOpen ? (
-              <X className="w-6 h-6" />
+              <X className="w-6 h-6" aria-hidden="true" />
             ) : (
-              <Menu className="w-6 h-6" />
+              <Menu className="w-6 h-6" aria-hidden="true" />
             )}
           </button>
         </div>
 
         {/* Mobile Navigation */}
         {isMenuOpen && (
-          <div className="md:hidden mt-4 pb-4 space-y-2">
+          <div
+            id="mobile-navigation"
+            className="md:hidden mt-4 pb-4 space-y-2"
+            role="navigation"
+            aria-label="Mobile navigation"
+          >
             <Link to="/" className="block py-2 hover:text-primary-600">
               Home
             </Link>

@@ -35,7 +35,7 @@ const AlertsSection = ({ alerts }) => {
           </div>
           {alert.action && (
             <Link
-              to="/pricing"
+              to="/upgrade-plans"
               className="text-sm font-semibold text-primary-600 hover:underline"
             >
               {alert.action}
@@ -48,4 +48,3 @@ const AlertsSection = ({ alerts }) => {
 };
 
 export default AlertsSection;
-

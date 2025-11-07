@@ -3,6 +3,8 @@
  * Centralized management of localStorage operations
  */
 
+import logger from "./logger.js";
+
 const STORAGE_KEYS = {
   accessToken: "accessToken",
   refreshToken: "refreshToken",
@@ -18,7 +20,7 @@ export const getStorageItem = (key) => {
   try {
     return localStorage.getItem(key);
   } catch (error) {
-    console.error(`Error getting ${key} from localStorage:`, error);
+    logger.error(`Error getting ${key} from localStorage:`, error);
     return null;
   }
 };
@@ -32,7 +34,7 @@ export const setStorageItem = (key, value) => {
   try {
     localStorage.setItem(key, value);
   } catch (error) {
-    console.error(`Error setting ${key} in localStorage:`, error);
+    logger.error(`Error setting ${key} in localStorage:`, error);
   }
 };
 
@@ -44,7 +46,7 @@ export const removeStorageItem = (key) => {
   try {
     localStorage.removeItem(key);
   } catch (error) {
-    console.error(`Error removing ${key} from localStorage:`, error);
+    logger.error(`Error removing ${key} from localStorage:`, error);
   }
 };
 

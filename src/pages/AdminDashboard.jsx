@@ -1,13 +1,14 @@
 import { useState, useEffect } from "react";
 import Header from "../components/layout/Header";
 import { BarChart3, Users, DollarSign, TrendingUp, Loader } from "lucide-react";
+import { TIMING } from "../constants/timing";
 
 const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     // Simulate loading
-    setTimeout(() => setLoading(false), 1000);
+    setTimeout(() => setLoading(false), TIMING.LOADING_SIMULATION_DELAY);
   }, []);
 
   if (loading) {

@@ -32,6 +32,14 @@ export const API_ENDPOINTS = {
     CHAT: `${API_BASE}/ai/chat`,
     STATUS: `${API_BASE}/ai/service-status`,
   },
+
+  // Chatbot
+  CHATBOT: {
+    LIST: `${API_BASE}/chatbot`,
+    GET: (id) => `${API_BASE}/chatbot/${id}`,
+    QUERY: (id) => `${API_BASE}/chatbot/${id}/query`,
+    CONVERSATIONS: (id) => `${API_BASE}/chatbot/${id}/conversations`,
+  },
 };
 
 export default API_ENDPOINTS;

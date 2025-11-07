@@ -38,8 +38,55 @@ export const BILLING_CYCLES = {
   YEARLY: "yearly",
 };
 
+/**
+ * Fallback plans used when API fails to load subscription plans
+ * This ensures the UI always has plan data to display
+ */
+export const FALLBACK_PLANS = [
+  {
+    _id: "free",
+    name: "free",
+    displayName: "Free Plan",
+    price: { monthly: 0 },
+    isPopular: false,
+    features: {
+      aiTextWriter: { wordsPerDay: 500 },
+      aiImageGenerator: { imagesPerDay: 3 },
+      aiSearch: { searchesPerDay: 10 },
+      aiChatbot: { messagesPerDay: 20 },
+    },
+  },
+  {
+    _id: "basic",
+    name: "basic",
+    displayName: "Basic Plan",
+    price: { monthly: 29 },
+    isPopular: true,
+    features: {
+      aiTextWriter: { wordsPerDay: 10000 },
+      aiImageGenerator: { imagesPerDay: 25 },
+      aiSearch: { searchesPerDay: 100 },
+      aiChatbot: { messagesPerDay: 500 },
+    },
+  },
+  {
+    _id: "pro",
+    name: "pro",
+    displayName: "Pro Plan",
+    price: { monthly: 79 },
+    isPopular: false,
+    features: {
+      aiTextWriter: { wordsPerDay: 50000 },
+      aiImageGenerator: { imagesPerDay: 150 },
+      aiSearch: { searchesPerDay: 500 },
+      aiChatbot: { messagesPerDay: 3000 },
+    },
+  },
+];
+
 export default {
   SUBSCRIPTION_TYPES,
   SUBSCRIPTION_LIMITS,
   BILLING_CYCLES,
+  FALLBACK_PLANS,
 };

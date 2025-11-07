@@ -1,13 +1,28 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
-import { Sparkles, Loader, Copy } from "lucide-react";
+import { useNavigate, Link } from "react-router-dom";
+import {
+  Sparkles,
+  Loader,
+  Copy,
+  AlertTriangle,
+  ArrowRight,
+  AlertCircle,
+} from "lucide-react";
 import { aiServices } from "../services/aiServices";
 import { toast } from "react-hot-toast";
+import AIWriterHistoryPanel from "../components/AIWriterHistoryPanel";
+import UpgradeLimitModal from "../components/UpgradeLimitModal";
+import { useSocket } from "../hooks/useSocket";
+import logger from "../utils/logger";
+import { EVENTS } from "../constants/events";
+import { TIMING } from "../constants/timing";
+import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "../constants/messages";
+import { authService } from "../services/auth";
 
-// Constants - Optimized for smooth typing effect (ChatGPT-like)
-const TYPING_SPEED_MS = 20; // 20ms per update (~50 chars/sec - visible typing speed)
-const CHARS_PER_UPDATE = 1; // Characters to reveal per update (smooth one-by-one)
-const CATCH_UP_THRESHOLD = 200; // Characters behind before catching up (prevents lag)
+// Typing animation constants (moved to TIMING constants)
+const TYPING_SPEED_MS = TIMING.TYPING_SPEED_MS;
+const CHARS_PER_UPDATE = TIMING.CHARS_PER_UPDATE;
+const CATCH_UP_THRESHOLD = TIMING.CATCH_UP_THRESHOLD;
 
 const AIWriter = () => {
   const [prompt, setPrompt] = useState("");
@@ -15,6 +30,9 @@ const AIWriter = () => {
   const [displayedText, setDisplayedText] = useState("");
   const [loading, setLoading] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
+  const [limitExceeded, setLimitExceeded] = useState(false);
+  const [limitExceededData, setLimitExceededData] = useState(null);
+  const [showModal, setShowModal] = useState(false); // Control modal visibility separately
 
   // Options from API
   const [options, setOptions] = useState(null);
@@ -34,8 +52,104 @@ const AIWriter = () => {
   const displayedIndexRef = useRef(0); // Current displayed character index
   const isMountedRef = useRef(true); // Component mount status
   const abortControllerRef = useRef(null); // Request cancellation
+  const modalShownRef = useRef(false); // Prevent modal reset on re-renders
 
   const navigate = useNavigate();
+
+  // Initialize Socket.IO connection for real-time usage updates
+  const { isConnected: socketConnected } = useSocket();
+
+  // Usage data state
+  const [usageData, setUsageData] = useState(null);
+
+  // Load usage data function - defined before useEffect
+  const loadUsageData = useCallback(async () => {
+    try {
+      const data = await authService.getDetailedUsage();
+      setUsageData(data);
+    } catch (error) {
+      // Don't log 429 errors - too noisy
+      if (error?.response?.status !== 429) {
+        logger.error("Failed to load usage data:", error);
+      }
+    }
+  }, []);
+
+  // Load usage data on mount and after generation
+  useEffect(() => {
+    loadUsageData();
+  }, [loadUsageData]);
+
+  // Calculate usage percentage
+  const usagePercentage = useMemo(() => {
+    if (!usageData?.usage?.aiTextWriter) return 0;
+    const { wordsUsed = 0, wordsLimit = 0 } = usageData.usage.aiTextWriter;
+    return wordsLimit > 0 ? Math.round((wordsUsed / wordsLimit) * 100) : 0;
+  }, [usageData]);
+
+  // Check initial usage on mount to show modal if already exceeded
+  useEffect(() => {
+    // Use a ref flag to persist across re-renders (better than local variable)
+    if (modalShownRef.current) {
+      // Already checked or modal shown - skip
+      return;
+    }
+
+    let isCancelled = false;
+
+    const checkInitialUsage = async () => {
+      try {
+        const { authService } = await import("../services/auth");
+        const usageData = await authService.getDetailedUsage();
+
+        // Check if component is still mounted and not cancelled
+        if (isCancelled || modalShownRef.current) {
+          return;
+        }
+
+        if (usageData?.usage?.aiTextWriter) {
+          const { wordsUsed = 0, wordsLimit = 0 } =
+            usageData.usage.aiTextWriter;
+          const percentage =
+            wordsLimit > 0 ? Math.round((wordsUsed / wordsLimit) * 100) : 0;
+
+          // Always show modal if usage >= 100% and not already shown (INITIAL PAGE LOAD ONLY)
+          if (percentage >= 100 && !modalShownRef.current) {
+            logger.warn(
+              `Usage limit exceeded (${percentage}%), showing upgrade modal on initial load`
+            );
+            modalShownRef.current = true;
+            setLimitExceeded(true);
+            setShowModal(true); // Show modal only on initial page load
+            setLimitExceededData({
+              service: "ai_text_writer",
+              usage: {
+                used: wordsUsed,
+                limit: wordsLimit,
+                percentage: percentage,
+                remaining: Math.max(0, wordsLimit - wordsUsed),
+              },
+              message: `You've used ${percentage}% of your daily word limit. Please upgrade your plan.`,
+              limitExceeded: true,
+            });
+          }
+        }
+      } catch (error) {
+        // Don't log 429 errors - too noisy
+        if (error?.response?.status !== 429) {
+          logger.error("Failed to check initial usage:", error);
+        }
+      }
+    };
+
+    // Run check once on mount
+    checkInitialUsage();
+
+    // Cleanup function
+    return () => {
+      isCancelled = true;
+    };
+  }, []); // Empty deps - only run once on mount
 
   // Memoized content type description
   const contentTypeDescription = useMemo(() => {
@@ -159,8 +273,8 @@ const AIWriter = () => {
         }
       } catch (error) {
         if (!isCancelled) {
-          console.error("Failed to load options:", error);
-          toast.error("Failed to load options");
+          logger.error("Failed to load options:", error);
+          toast.error(ERROR_MESSAGES.OPTIONS_LOAD_FAILED);
         }
       } finally {
         if (!isCancelled) {
@@ -188,6 +302,119 @@ const AIWriter = () => {
     };
   }, [cleanupTypingAnimation]);
 
+  // Listen for Socket.IO usage events
+  useEffect(() => {
+    // Handle usage limit exceeded (100%)
+    const handleLimitExceeded = (event) => {
+      const data = event.detail;
+      logger.warn("AIWriter: Usage limit exceeded event received:", data);
+
+      // Stop generation immediately
+      if (loading) {
+        logger.info("Stopping generation due to limit exceeded");
+        setLoading(false);
+        setIsStreaming(false);
+        cleanupTypingAnimation();
+      }
+
+      // Show error in Generated Content area (NO MODAL during generation)
+      logger.info(
+        "Limit exceeded during generation - showing in content area only"
+      );
+
+      // Prepare data for content area display
+      const errorData = {
+        ...data,
+        service: data?.service || "ai_text_writer",
+        usage: {
+          used: data?.usage?.used || 0,
+          limit: data?.usage?.limit || 0,
+          percentage: data?.usage?.percentage || 100,
+          remaining: data?.usage?.remaining || 0,
+        },
+        message: data?.message || data?.error || ERROR_MESSAGES.LIMIT_EXCEEDED,
+        limitExceeded: true,
+        timestamp: data?.timestamp || new Date(),
+      };
+
+      // Set state for content area display (NO MODAL)
+      setLimitExceeded(true);
+      setLimitExceededData(errorData);
+      // DON'T show modal - content area already shows error
+    };
+
+    // Handle usage limit warning (will exceed)
+    const handleLimitWarning = (event) => {
+      const data = event.detail;
+      logger.warn("Usage limit warning:", data);
+
+      // Stop generation
+      if (loading) {
+        setLoading(false);
+        setIsStreaming(false);
+        cleanupTypingAnimation();
+      }
+
+      // Show in content area only (NO MODAL) if already at 100%+
+      if (data?.usage?.percentage >= 100) {
+        setLimitExceeded(true);
+        setLimitExceededData(data);
+        // DON'T show modal - content area already shows error
+      }
+    };
+
+    // Handle usage warning (80%+)
+    const handleUsageWarning = (event) => {
+      const data = event.detail;
+      logger.debug("Usage warning:", data);
+
+      // Show in content area only (NO MODAL) if 100%+ reached
+      if (data?.usage?.percentage >= 100) {
+        setLimitExceeded(true);
+        setLimitExceededData(data);
+        // DON'T show modal - content area already shows error
+      }
+    };
+
+    // Handle usage updated (after generation)
+    const handleUsageUpdated = (event) => {
+      const data = event.detail;
+      logger.debug("Usage updated:", data);
+
+      // Check if limit exceeded after generation
+      const percentage = data?.usage?.percentage || 0;
+      if (percentage >= 100) {
+        // Show in content area only (NO MODAL)
+        logger.info(
+          "Usage exceeded after generation - showing in content area only"
+        );
+        setLimitExceeded(true);
+        setLimitExceededData(data);
+        // DON'T show modal - content area already shows error
+      }
+    };
+
+    // Add event listeners
+    window.addEventListener(EVENTS.USAGE_LIMIT_EXCEEDED, handleLimitExceeded);
+    window.addEventListener(EVENTS.USAGE_LIMIT_WARNING, handleLimitWarning);
+    window.addEventListener(EVENTS.USAGE_WARNING, handleUsageWarning);
+    window.addEventListener(EVENTS.USAGE_UPDATED, handleUsageUpdated);
+
+    // Cleanup
+    return () => {
+      window.removeEventListener(
+        EVENTS.USAGE_LIMIT_EXCEEDED,
+        handleLimitExceeded
+      );
+      window.removeEventListener(
+        EVENTS.USAGE_LIMIT_WARNING,
+        handleLimitWarning
+      );
+      window.removeEventListener(EVENTS.USAGE_WARNING, handleUsageWarning);
+      window.removeEventListener(EVENTS.USAGE_UPDATED, handleUsageUpdated);
+    };
+  }, [loading, cleanupTypingAnimation]); // Keep dependencies to ensure latest handlers are used
+
   // Handle chunk received during streaming
   const handleChunkReceived = useCallback((chunk, partial) => {
     if (!isMountedRef.current) return;
@@ -197,8 +424,7 @@ const AIWriter = () => {
     accumulatedTextRef.current = partial;
     setGeneratedText(partial); // Store full text for copy button
 
-    // Debug: Log chunk reception (can remove in production)
-    // console.log(`📥 Chunk received: ${chunk?.length || 0} chars, Total: ${partial.length}`);
+    // Chunk received - animation handles display
 
     // Animation useEffect handles gradual display automatically
     // No direct displayText manipulation here - ensures smooth typing effect
@@ -234,10 +460,20 @@ const AIWriter = () => {
           setDisplayedText(finalText);
         }
         cleanupTypingAnimation();
-        toast.success(`Text generated! (${data.wordsGenerated || 0} words)`);
-      }, 800);
+        toast.success(
+          SUCCESS_MESSAGES.TEXT_GENERATED(data.wordsGenerated || 0)
+        );
+
+        // Refresh history after successful generation
+        if (window.refreshHistoryPanel) {
+          window.refreshHistoryPanel();
+        }
+
+        // Reload usage data
+        loadUsageData();
+      }, TIMING.MODAL_DELAY);
     },
-    [cleanupTypingAnimation]
+    [cleanupTypingAnimation, loadUsageData]
   );
 
   // Handle streaming error
@@ -248,7 +484,64 @@ const AIWriter = () => {
       setIsStreaming(false);
       setLoading(false);
       cleanupTypingAnimation();
-      toast.error(error || "Failed to generate text");
+
+      // Check if error is limit exceeded
+      const errorLower = error?.toLowerCase() || "";
+      if (
+        errorLower.includes("limit") ||
+        errorLower.includes("exceeded") ||
+        errorLower.includes("upgrade")
+      ) {
+        logger.warn(
+          "Limit exceeded error detected in handleStreamError:",
+          error
+        );
+
+        toast.error(error || ERROR_MESSAGES.LIMIT_EXCEEDED);
+
+        // Extract usage from error message if possible, or use default
+        // Error format: "Daily word limit reached (800 words used)"
+        let used = 0;
+        let limit = 0;
+        let percentage = 100;
+
+        // Try to parse usage from error message
+        const match = error.match(
+          /(\d+)\s*words?\s*(?:used|of)\s*(?:out\s*of\s*)?(\d+)?/i
+        );
+        if (match) {
+          used = parseInt(match[1]) || 0;
+          limit = parseInt(match[2]) || 800;
+          percentage = Math.round((used / limit) * 100);
+        }
+
+        // Show error in Generated Content area (NO MODAL during generation)
+        logger.debug(
+          "Limit exceeded in stream error - showing in content area only:",
+          {
+            used,
+            limit,
+            percentage,
+          }
+        );
+
+        // Set state for content area display (NO MODAL)
+        setLimitExceeded(true);
+        setLimitExceededData({
+          service: "ai_text_writer",
+          usage: {
+            used: used,
+            limit: limit,
+            percentage: percentage,
+            remaining: Math.max(0, limit - used),
+          },
+          message: error || ERROR_MESSAGES.LIMIT_EXCEEDED,
+          limitExceeded: true,
+        });
+        // DON'T show modal - content area already shows error
+      } else {
+        toast.error(error || ERROR_MESSAGES.GENERATION_FAILED);
+      }
     },
     [cleanupTypingAnimation]
   );
@@ -259,7 +552,7 @@ const AIWriter = () => {
       e.preventDefault();
 
       if (!prompt.trim()) {
-        toast.error("Please enter a prompt");
+        toast.error(ERROR_MESSAGES.PROMPT_REQUIRED);
         return;
       }
 
@@ -305,6 +598,7 @@ const AIWriter = () => {
       contentType,
       tone,
       length,
+      limitExceeded,
       resetStates,
       handleChunkReceived,
       handleStreamComplete,
@@ -318,26 +612,78 @@ const AIWriter = () => {
 
     try {
       await navigator.clipboard.writeText(generatedText);
-      toast.success("Text copied to clipboard!");
+      toast.success(SUCCESS_MESSAGES.TEXT_COPIED);
     } catch (error) {
-      console.error("Failed to copy:", error);
+      logger.error("Failed to copy:", error);
       toast.error("Failed to copy text");
     }
   }, [generatedText]);
+
+  // Handle load from history
+  const handleLoadHistory = useCallback((content, prompt = "") => {
+    setGeneratedText(content);
+    setDisplayedText(content);
+    if (prompt) {
+      setPrompt(prompt);
+    }
+    // Scroll to top of output section
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, []);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl sm:text-4xl font-bold mb-2 gradient-text">
-          AI Text Writer
-        </h1>
-        <p className="text-gray-600 text-sm sm:text-base">
-          Create professional content with AI-powered writing assistant
-        </p>
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
+            <Sparkles className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-3xl sm:text-4xl font-bold">AI Text Writer</h1>
+            <p className="text-gray-600 text-sm sm:text-base mt-1">
+              Create professional content with AI-powered writing assistant
+            </p>
+          </div>
+        </div>
+
+        {/* Usage Stats */}
+        {usageData?.usage?.aiTextWriter && (
+          <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg p-4 mb-6">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-gray-700">
+                Daily Usage:{" "}
+                {usageData.usage.aiTextWriter.wordsUsed?.toLocaleString() || 0}{" "}
+                /{" "}
+                {usageData.usage.aiTextWriter.wordsLimit?.toLocaleString() || 0}{" "}
+                words
+              </span>
+              <span className="text-sm font-semibold text-blue-600">
+                {usagePercentage}%
+              </span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all ${
+                  usagePercentage >= 90
+                    ? "bg-red-500"
+                    : usagePercentage >= 70
+                    ? "bg-yellow-500"
+                    : "bg-blue-500"
+                }`}
+                style={{ width: `${Math.min(usagePercentage, 100)}%` }}
+              />
+            </div>
+            {usagePercentage >= 90 && (
+              <p className="text-xs text-red-600 mt-2 flex items-center gap-1">
+                <AlertCircle className="w-3 h-3" />
+                You're running low on daily words. Consider upgrading your plan.
+              </p>
+            )}
+          </div>
+        )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 relative">
         {/* Input Section */}
         <div className="card">
           <div className="flex items-center gap-2 mb-6">
@@ -561,7 +907,42 @@ const AIWriter = () => {
                   </div>
                 )}
               </div>
+            ) : limitExceeded && limitExceededData ? (
+              // Limit exceeded state - Show error message in content area
+              <div className="flex flex-col items-center justify-center h-full min-h-[300px] text-center">
+                <div className="bg-red-100 rounded-full p-4 mb-4">
+                  <AlertTriangle className="w-10 h-10 text-red-600" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">
+                  Daily Limit Reached
+                </h3>
+                <p className="text-gray-600 text-base mb-1 max-w-md">
+                  You've used{" "}
+                  <span className="font-semibold text-red-600">
+                    {limitExceededData?.usage?.percentage || 100}% (
+                    {limitExceededData?.usage?.used?.toLocaleString() || 0} /{" "}
+                    {limitExceededData?.usage?.limit?.toLocaleString() || 0}{" "}
+                    words)
+                  </span>{" "}
+                  of your daily word limit.
+                </p>
+                <p className="text-gray-500 text-sm mb-6 max-w-md">
+                  Please upgrade your plan to continue generating content.
+                </p>
+                <Link
+                  to="/upgrade-plans"
+                  className="inline-flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white font-medium py-2.5 px-6 rounded-lg transition-colors"
+                  onClick={() => {
+                    setLimitExceeded(false);
+                    setLimitExceededData(null);
+                  }}
+                >
+                  View Plans
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+              </div>
             ) : (
+              // Empty state - No content yet
               <div className="flex flex-col items-center justify-center h-full min-h-[300px] text-center">
                 <Sparkles
                   className="w-12 h-12 text-gray-300 mb-4"
@@ -578,6 +959,23 @@ const AIWriter = () => {
           </div>
         </div>
       </div>
+
+      {/* History Panel (Floating Drawer) */}
+      <AIWriterHistoryPanel onLoadHistory={handleLoadHistory} />
+
+      {/* Upgrade Limit Modal - Only show on initial page load, not during generation errors */}
+      {showModal && limitExceeded && limitExceededData && (
+        <UpgradeLimitModal
+          isOpen={true}
+          onClose={() => {
+            setShowModal(false);
+            // Keep limitExceeded true so content area still shows error
+            // Keep modalShownRef true to prevent immediate reopen
+            modalShownRef.current = true;
+          }}
+          usageData={limitExceededData}
+        />
+      )}
     </div>
   );
 };

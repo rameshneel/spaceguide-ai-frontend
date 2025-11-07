@@ -1,21 +1,27 @@
 import { Routes, Route, Navigate } from "react-router-dom";
+import { Suspense, lazy } from "react";
 import ProtectedRoute from "../components/ProtectedRoute";
 import DashboardLayout from "../components/layout/DashboardLayout";
+import RouteLoader from "../components/RouteLoader";
+import RouteErrorBoundary from "../components/RouteErrorBoundary";
 import { ROUTES } from "../constants/routes";
 
-// Pages
-import Home from "../pages/Home";
-import Login from "../pages/Login";
-import Register from "../pages/Register";
-import Dashboard from "../pages/Dashboard";
-import AdminDashboard from "../pages/AdminDashboard";
-import Pricing from "../pages/Pricing";
-import AIWriter from "../pages/AIWriter";
-import ImageGenerator from "../pages/ImageGenerator";
-import Chatbot from "../pages/Chatbot";
-import AISearch from "../pages/AISearch";
-import History from "../pages/History";
-import Profile from "../pages/Profile";
+// Lazy load pages for code splitting (Industry Best Practice)
+// This reduces initial bundle size and improves performance
+// Each route will be loaded as a separate chunk when needed
+const Home = lazy(() => import("../pages/Home"));
+const Login = lazy(() => import("../pages/Login"));
+const Register = lazy(() => import("../pages/Register"));
+const Dashboard = lazy(() => import("../pages/Dashboard"));
+const AdminDashboard = lazy(() => import("../pages/AdminDashboard"));
+const PublicPricing = lazy(() => import("../pages/PublicPricing"));
+const UpgradePlans = lazy(() => import("../pages/UpgradePlans"));
+const AIWriter = lazy(() => import("../pages/AIWriter"));
+const ImageGenerator = lazy(() => import("../pages/ImageGenerator"));
+const Chatbot = lazy(() => import("../pages/Chatbot"));
+const AISearch = lazy(() => import("../pages/AISearch"));
+const History = lazy(() => import("../pages/History"));
+const Profile = lazy(() => import("../pages/Profile"));
 
 /**
  * Application Routes Configuration
@@ -23,45 +29,158 @@ import Profile from "../pages/Profile";
  */
 export const AppRoutes = () => {
   return (
-    <Routes>
-      {/* Public Routes */}
-      <Route path={ROUTES.HOME} element={<Home />} />
-      <Route path={ROUTES.LOGIN} element={<Login />} />
-      <Route path={ROUTES.REGISTER} element={<Register />} />
-      <Route path={ROUTES.PRICING} element={<Pricing />} />
+    <Suspense fallback={<RouteLoader />}>
+      <Routes>
+        {/* Public Routes */}
+        <Route
+          path={ROUTES.HOME}
+          element={
+            <RouteErrorBoundary>
+              <Suspense fallback={<RouteLoader />}>
+                <Home />
+              </Suspense>
+            </RouteErrorBoundary>
+          }
+        />
+        <Route
+          path={ROUTES.LOGIN}
+          element={
+            <RouteErrorBoundary>
+              <Suspense fallback={<RouteLoader />}>
+                <Login />
+              </Suspense>
+            </RouteErrorBoundary>
+          }
+        />
+        <Route
+          path={ROUTES.REGISTER}
+          element={
+            <RouteErrorBoundary>
+              <Suspense fallback={<RouteLoader />}>
+                <Register />
+              </Suspense>
+            </RouteErrorBoundary>
+          }
+        />
+        <Route
+          path={ROUTES.PRICING}
+          element={
+            <RouteErrorBoundary>
+              <Suspense fallback={<RouteLoader />}>
+                <PublicPricing />
+              </Suspense>
+            </RouteErrorBoundary>
+          }
+        />
 
-      {/* Protected Routes with Dashboard Layout (Sidebar) */}
-      <Route
-        element={
-          <ProtectedRoute>
-            <DashboardLayout />
-          </ProtectedRoute>
-        }
-      >
-        <Route path={ROUTES.DASHBOARD} element={<Dashboard />} />
-        <Route path={ROUTES.AI_WRITER} element={<AIWriter />} />
-        <Route path={ROUTES.IMAGE_GENERATOR} element={<ImageGenerator />} />
-        <Route path={ROUTES.CHATBOT} element={<Chatbot />} />
-        <Route path={ROUTES.AI_SEARCH} element={<AISearch />} />
-        <Route path={ROUTES.HISTORY} element={<History />} />
-        <Route path={ROUTES.PROFILE} element={<Profile />} />
-        {/* Pricing accessible from dashboard (with sidebar) */}
-        <Route path={ROUTES.PRICING} element={<Pricing />} />
-      </Route>
+        {/* Protected Routes with Dashboard Layout (Sidebar) */}
+        <Route
+          element={
+            <ProtectedRoute>
+              <DashboardLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route
+            path={ROUTES.DASHBOARD}
+            element={
+              <RouteErrorBoundary>
+                <Suspense fallback={<RouteLoader />}>
+                  <Dashboard />
+                </Suspense>
+              </RouteErrorBoundary>
+            }
+          />
+          <Route
+            path={ROUTES.AI_WRITER}
+            element={
+              <RouteErrorBoundary>
+                <Suspense fallback={<RouteLoader />}>
+                  <AIWriter />
+                </Suspense>
+              </RouteErrorBoundary>
+            }
+          />
+          <Route
+            path={ROUTES.IMAGE_GENERATOR}
+            element={
+              <RouteErrorBoundary>
+                <Suspense fallback={<RouteLoader />}>
+                  <ImageGenerator />
+                </Suspense>
+              </RouteErrorBoundary>
+            }
+          />
+          <Route
+            path={ROUTES.CHATBOT}
+            element={
+              <RouteErrorBoundary>
+                <Suspense fallback={<RouteLoader />}>
+                  <Chatbot />
+                </Suspense>
+              </RouteErrorBoundary>
+            }
+          />
+          <Route
+            path={ROUTES.AI_SEARCH}
+            element={
+              <RouteErrorBoundary>
+                <Suspense fallback={<RouteLoader />}>
+                  <AISearch />
+                </Suspense>
+              </RouteErrorBoundary>
+            }
+          />
+          <Route
+            path={ROUTES.HISTORY}
+            element={
+              <RouteErrorBoundary>
+                <Suspense fallback={<RouteLoader />}>
+                  <History />
+                </Suspense>
+              </RouteErrorBoundary>
+            }
+          />
+          <Route
+            path={ROUTES.PROFILE}
+            element={
+              <RouteErrorBoundary>
+                <Suspense fallback={<RouteLoader />}>
+                  <Profile />
+                </Suspense>
+              </RouteErrorBoundary>
+            }
+          />
+          <Route
+            path={ROUTES.UPGRADE_PLANS}
+            element={
+              <RouteErrorBoundary>
+                <Suspense fallback={<RouteLoader />}>
+                  <UpgradePlans />
+                </Suspense>
+              </RouteErrorBoundary>
+            }
+          />
+        </Route>
 
-      {/* Admin Dashboard (Separate - No Sidebar) */}
-      <Route
-        path={ROUTES.ADMIN_DASHBOARD}
-        element={
-          <ProtectedRoute>
-            <AdminDashboard />
-          </ProtectedRoute>
-        }
-      />
+        {/* Admin Dashboard (Separate - No Sidebar) */}
+        <Route
+          path={ROUTES.ADMIN_DASHBOARD}
+          element={
+            <RouteErrorBoundary>
+              <ProtectedRoute>
+                <Suspense fallback={<RouteLoader />}>
+                  <AdminDashboard />
+                </Suspense>
+              </ProtectedRoute>
+            </RouteErrorBoundary>
+          }
+        />
 
-      {/* 404 - Redirect to home */}
-      <Route path="*" element={<Navigate to={ROUTES.HOME} replace />} />
-    </Routes>
+        {/* 404 - Redirect to home */}
+        <Route path="*" element={<Navigate to={ROUTES.HOME} replace />} />
+      </Routes>
+    </Suspense>
   );
 };
 

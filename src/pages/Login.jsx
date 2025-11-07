@@ -34,7 +34,24 @@ const Login = () => {
         navigate("/dashboard");
       }
     } catch (error) {
-      toast.error(error.message || "Login failed");
+      // API interceptor already shows toast for:
+      // 1. Network errors (userFriendlyMessage is set)
+      // 2. Login 401 errors (invalid credentials)
+      // 3. All other errors
+      // So we should NOT show duplicate toast here
+
+      // Only show toast if interceptor didn't handle it (shouldn't happen, but safety check)
+      const wasHandledByInterceptor =
+        error?.userFriendlyMessage || // Network errors
+        error?.response?.data?.message; // Backend errors (interceptor shows these)
+
+      if (!wasHandledByInterceptor) {
+        // Fallback: Only show if interceptor somehow didn't handle it
+        const errorMessage =
+          error?.message || "Login failed. Please check your credentials.";
+        toast.error(errorMessage);
+      }
+      // Otherwise, interceptor already showed the error, so we do nothing
     } finally {
       setLoading(false);
     }

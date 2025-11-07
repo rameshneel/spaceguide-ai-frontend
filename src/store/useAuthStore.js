@@ -22,11 +22,25 @@ const useAuthStore = create(
             loading: false,
           });
 
-          // Tokens are stored in httpOnly cookies by backend - no need to store locally
+          // Store token in localStorage for Socket.IO connection
+          // auth.js already stores it, but ensure it's synced
+          if (data.accessToken) {
+            localStorage.setItem("accessToken", data.accessToken);
+          }
+
           return data;
         } catch (error) {
-          set({ error: error.message, loading: false });
-          throw error;
+          // Extract proper error message from axios error response
+          const errorMessage =
+            error?.userFriendlyMessage || // Use interceptor's user-friendly message if available
+            error?.response?.data?.message ||
+            error?.message ||
+            "Login failed. Please try again.";
+          set({ error: errorMessage, loading: false });
+          // Re-throw error, preserving all properties set by interceptor
+          // This ensures Login component can check if interceptor already handled it
+          error.message = errorMessage; // Update message but preserve other properties
+          throw error; // Re-throw original error to preserve userFriendlyMessage, errorType, etc.
         }
       },
 
@@ -42,11 +56,24 @@ const useAuthStore = create(
             loading: false,
           });
 
-          // Tokens are stored in httpOnly cookies by backend - no need to store locally
+          // Store token in localStorage for Socket.IO connection
+          // auth.js already stores it, but ensure it's synced
+          if (data.accessToken) {
+            localStorage.setItem("accessToken", data.accessToken);
+          }
+
           return data;
         } catch (error) {
-          set({ error: error.message, loading: false });
-          throw error;
+          // Extract proper error message from axios error response
+          const errorMessage =
+            error?.userFriendlyMessage || // Use interceptor's user-friendly message if available
+            error?.response?.data?.message ||
+            error?.message ||
+            "Registration failed. Please try again.";
+          set({ error: errorMessage, loading: false });
+          // Re-throw error, preserving all properties set by interceptor
+          error.message = errorMessage; // Update message but preserve other properties
+          throw error; // Re-throw original error to preserve userFriendlyMessage, errorType, etc.
         }
       },
 
@@ -55,9 +82,11 @@ const useAuthStore = create(
         try {
           await authService.logout();
         } catch (error) {
-          console.error("Logout error:", error);
+          // Logout errors are expected if token is already expired - no need to log
         } finally {
           set({ user: null, token: null });
+          // Clear localStorage token (used for Socket.IO)
+          localStorage.removeItem("accessToken");
           // Cookies are cleared by backend on logout
         }
       },
@@ -65,11 +94,16 @@ const useAuthStore = create(
       // Get current user
       getCurrentUser: async () => {
         try {
-          const data = await authService.getCurrentUser();
-          set({ user: data.user });
-          return data;
+          const response = await authService.getCurrentUser();
+          // API returns: { statusCode, data: { user: { subscription, _id, email, ... } }, message, success }
+          // authService.getCurrentUser returns response.data.data which is the user object
+          const userData = response?.user || response?.data?.user || response;
+          if (userData) {
+            set({ user: userData });
+          }
+          return response;
         } catch (error) {
-          console.error("Get current user error:", error);
+          // Silently fail - user might not be authenticated
           return null;
         }
       },
@@ -87,6 +121,19 @@ const useAuthStore = create(
       // Clear auth state (helper for external use - e.g., API interceptors)
       clearAuth: () => {
         set({ user: null, token: null, error: null });
+        // Also clear localStorage token
+        localStorage.removeItem("accessToken");
+      },
+
+      // Update token (for token refresh scenarios)
+      updateToken: (newToken) => {
+        set({ token: newToken });
+        // Also update localStorage
+        if (newToken) {
+          localStorage.setItem("accessToken", newToken);
+        } else {
+          localStorage.removeItem("accessToken");
+        }
       },
     }),
     {
