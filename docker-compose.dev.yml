@@ -7,7 +7,7 @@ services:
     container_name: spaceguide-ai-frontend-dev
     restart: unless-stopped
     ports:
-      - "3000:80"
+      - "3003:80" # Changed from 3000 to 3003 (3000 already in use)
     build:
       args:
         VITE_API_URL: ${VITE_API_URL:-http://localhost:5003/api}
