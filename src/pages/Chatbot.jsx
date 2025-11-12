@@ -468,63 +468,92 @@ const Chatbot = () => {
     }
   };
 
-  // Usage percentage
-  const usagePercentage = usageData?.usage?.aiChatbot
-    ? Math.round(
-        ((usageData.usage.aiChatbot.chatbotsUsed || 0) /
-          (usageData.usage.aiChatbot.chatbotsLimit || 1)) *
-          100
-      )
-    : 0;
+  // Usage percentage - use actual chatbots count if available, otherwise use usage data
+  const chatbotsCount =
+    chatbots.length || usageData?.usage?.aiChatbot?.chatbotsUsed || 0;
+  const chatbotsLimit = usageData?.usage?.aiChatbot?.chatbotsLimit || 5;
+  const usagePercentage = Math.round((chatbotsCount / chatbotsLimit) * 100);
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-6">
       {/* Header */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center space-x-4">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center shadow-lg">
-              <MessageSquare className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">
-                AI Chatbot Builder
-              </h1>
-              <p className="text-gray-600 text-sm mt-1">
-                Create and train chatbots for your website
-              </p>
-            </div>
+      <div className="mb-8">
+        {/* Title Section */}
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center shadow-lg">
+            <MessageSquare className="w-6 h-6 text-white" />
           </div>
+          <div>
+            <h1 className="text-3xl sm:text-4xl font-bold text-gray-900">
+              AI Chatbot Builder
+            </h1>
+            <p className="text-gray-600 text-sm sm:text-base mt-1">
+              Create and train chatbots for your website
+            </p>
+          </div>
+        </div>
 
-          <div className="flex items-center space-x-4">
-            {/* Usage Stats */}
-            {usageData?.usage?.aiChatbot && (
-              <div className="text-right">
-                <div className="text-sm text-gray-600">
-                  Chatbots: {usageData.usage.aiChatbot.chatbotsUsed || 0} /{" "}
-                  {usageData.usage.aiChatbot.chatbotsLimit || 0}
+        {/* Usage Stats and Action Bar */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+          {/* Usage Stats - Enhanced Card Design */}
+          {usageData?.usage?.aiChatbot && (
+            <div className="flex-1 bg-gradient-to-br from-blue-50 to-purple-50 border border-blue-200 rounded-lg px-4 py-3">
+              <div className="flex items-center gap-3">
+                <div className="flex-shrink-0">
+                  <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-500 rounded-lg flex items-center justify-center shadow-sm">
+                    <MessageSquare className="w-5 h-5 text-white" />
+                  </div>
                 </div>
-                <div className="w-48 bg-gray-200 rounded-full h-2 mt-1">
-                  <div
-                    className={`h-2 rounded-full transition-all ${
-                      usagePercentage >= 100
-                        ? "bg-red-500"
-                        : usagePercentage >= 80
-                        ? "bg-yellow-500"
-                        : "bg-green-500"
-                    }`}
-                    style={{ width: `${Math.min(usagePercentage, 100)}%` }}
-                  />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-semibold text-gray-700 uppercase tracking-wide">
+                      Chatbot Usage
+                    </span>
+                    <span className="text-base font-bold text-gray-900">
+                      {chatbots.length ||
+                        usageData.usage.aiChatbot.chatbotsUsed ||
+                        0}{" "}
+                      / {usageData.usage.aiChatbot.chatbotsLimit || 0}
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden shadow-inner">
+                    <div
+                      className={`h-full rounded-full transition-all duration-500 ${
+                        usagePercentage >= 100
+                          ? "bg-gradient-to-r from-red-500 to-red-600"
+                          : usagePercentage >= 80
+                          ? "bg-gradient-to-r from-yellow-500 to-orange-500"
+                          : "bg-gradient-to-r from-green-500 to-emerald-500"
+                      }`}
+                      style={{ width: `${Math.min(usagePercentage, 100)}%` }}
+                    />
+                  </div>
+                  {usagePercentage >= 80 && usagePercentage < 100 && (
+                    <p className="text-xs text-orange-600 mt-1.5 font-medium flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" />
+                      {usagePercentage}% used - Consider upgrading
+                    </p>
+                  )}
+                  {usagePercentage >= 100 && (
+                    <p className="text-xs text-red-600 mt-1.5 font-medium flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" />
+                      Limit reached - Upgrade to create more
+                    </p>
+                  )}
                 </div>
               </div>
-            )}
+            </div>
+          )}
 
+          {/* Create Button */}
+          <div className="flex-shrink-0">
             <button
               onClick={() => {
                 setShowCreateModal(true);
                 loadTemplates();
               }}
-              className="btn-primary flex items-center space-x-2"
+              disabled={usagePercentage >= 100}
+              className="btn-primary flex items-center space-x-2 whitespace-nowrap w-full sm:w-auto justify-center disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Plus className="w-5 h-5" />
               <span>Create Chatbot</span>

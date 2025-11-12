@@ -20,15 +20,6 @@ const PublicPricing = () => {
   const [useFallback, setUseFallback] = useState(false);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    loadPlans();
-
-    // If user is authenticated, redirect to upgrade-plans
-    if (isAuthenticated()) {
-      navigate("/upgrade-plans", { replace: true });
-    }
-  }, [isAuthenticated, navigate]);
-
   const loadPlans = async () => {
     try {
       await fetchPlans();
@@ -44,6 +35,16 @@ const PublicPricing = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    loadPlans();
+
+    // If user is authenticated, redirect to upgrade-plans
+    if (isAuthenticated()) {
+      navigate("/upgrade-plans", { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [navigate]);
 
   const handleGetStarted = (planId) => {
     // Redirect to register with plan preference

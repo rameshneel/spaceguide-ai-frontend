@@ -107,7 +107,10 @@ const Sidebar = ({ isMobile, onClose }) => {
                   {user?.firstName} {user?.lastName}
                 </p>
                 <p className="text-xs text-gray-500 capitalize">
-                  {user?.subscription?.type || "Free"} Plan
+                  {user?.subscription?.type ||
+                    user?.subscription?.plan ||
+                    "Free"}{" "}
+                  Plan
                 </p>
               </div>
             )}

@@ -24,10 +24,8 @@ const getStripePromise = () => {
   // Validate that it's a publishable key, not a secret key
   if (stripeKey.startsWith("sk_")) {
     logger.error(
-      "❌ ERROR: Secret key detected! Frontend should use PUBLISHABLE key (pk_test_ or pk_live_), not SECRET key (sk_test_ or sk_live_)."
-    );
-    console.error(
-      "🔴 STRIPE KEY ERROR:",
+      "❌ ERROR: Secret key detected! Frontend should use PUBLISHABLE key (pk_test_ or pk_live_), not SECRET key (sk_test_ or sk_live_).",
+      "\n🔴 STRIPE KEY ERROR:",
       "You're using a SECRET key in the frontend. This is a security risk!",
       "\nPlease update your .env file:",
       "\n- Use PUBLISHABLE key: pk_test_... or pk_live_...",

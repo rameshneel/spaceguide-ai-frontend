@@ -5,7 +5,13 @@ import useAuthStore from "../../store/useAuthStore";
 const SubscriptionCard = () => {
   const { user } = useAuthStore();
 
-  const currentPlan = user?.subscription?.type || "free";
+  // Backend can return either subscription.type or subscription.plan
+  // Check both for compatibility
+  const currentPlan = (
+    user?.subscription?.type ||
+    user?.subscription?.plan ||
+    "free"
+  ).toLowerCase();
   const planDisplay = {
     free: { name: "Free Plan", color: "text-gray-600", bg: "bg-gray-50" },
     basic: { name: "Basic Plan", color: "text-blue-600", bg: "bg-blue-50" },

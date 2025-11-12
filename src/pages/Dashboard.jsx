@@ -122,6 +122,15 @@ const Dashboard = () => {
         setRecentActivity(activityData?.history || []);
         setRetryCount(0); // Reset retry count on success
 
+        // Update user subscription if usage API returned subscription data
+        // This ensures UI reflects the latest subscription status
+        if (usageData?.subscription) {
+          // Update user subscription in store
+          useAuthStore.getState().updateUser({
+            subscription: usageData.subscription,
+          });
+        }
+
         // Generate alerts based on usage
         generateAlerts(usageData, activityData?.history || []);
       } catch (err) {
@@ -205,34 +214,37 @@ const Dashboard = () => {
   );
 
   // Service usage pie chart data - memoized for performance
-  const serviceUsageData = useMemo(
-    () =>
-      detailedUsage?.usage
-        ? [
-            {
-              name: "AI Text Writer",
-              value: detailedUsage.usage.aiTextWriter?.wordsUsed || 0,
-              color: "#3b82f6",
-            },
-            {
-              name: "AI Images",
-              value: detailedUsage.usage.aiImageGenerator?.imagesUsed || 0,
-              color: "#8b5cf6",
-            },
-            {
-              name: "AI Chatbot",
-              value: detailedUsage.usage.aiChatbot?.chatbotsUsed || 0,
-              color: "#10b981",
-            },
-            {
-              name: "AI Search",
-              value: detailedUsage.usage.aiSearch?.searchesUsed || 0,
-              color: "#f59e0b",
-            },
-          ].filter((item) => item.value > 0)
-        : [],
-    [detailedUsage?.usage]
-  );
+  // Include all services even if value is 0, but filter out if all are 0
+  const serviceUsageData = useMemo(() => {
+    if (!detailedUsage?.usage) return [];
+
+    const data = [
+      {
+        name: "AI Text Writer",
+        value: detailedUsage.usage.aiTextWriter?.wordsUsed || 0,
+        color: "#3b82f6",
+      },
+      {
+        name: "AI Images",
+        value: detailedUsage.usage.aiImageGenerator?.imagesUsed || 0,
+        color: "#8b5cf6",
+      },
+      {
+        name: "AI Chatbot",
+        value: detailedUsage.usage.aiChatbot?.chatbotsUsed || 0,
+        color: "#10b981",
+      },
+      {
+        name: "AI Search",
+        value: detailedUsage.usage.aiSearch?.searchesUsed || 0,
+        color: "#f59e0b",
+      },
+    ];
+
+    // Only filter out if all values are 0 (show empty state)
+    const hasAnyUsage = data.some((item) => item.value > 0);
+    return hasAnyUsage ? data : [];
+  }, [detailedUsage?.usage]);
 
   // Memoize welcome message
   const welcomeMessage = useMemo(

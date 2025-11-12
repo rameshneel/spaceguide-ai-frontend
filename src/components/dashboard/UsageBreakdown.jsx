@@ -30,7 +30,7 @@ const UsageBreakdown = ({ usage, timeFilter, onTimeFilterChange }) => {
       used: usage?.aiChatbot?.chatbotsUsed || 0,
       limit: usage?.aiChatbot?.chatbotsLimit || 0,
       percentage: usage?.aiChatbot?.chatbotsPercentage || 0,
-      unit: "messages",
+      unit: "chatbots",
     },
     {
       name: "AI Search",

@@ -29,6 +29,8 @@ const UpgradePlans = () => {
 
   useEffect(() => {
     loadPlans();
+    // Also fetch current user to ensure subscription data is up to date
+    getCurrentUser();
   }, []);
 
   const loadPlans = async () => {
@@ -109,11 +111,17 @@ const UpgradePlans = () => {
   };
 
   const getCurrentPlanName = () => {
-    return user?.subscription?.type || "free";
+    // Backend can return either subscription.type or subscription.plan
+    // Check both for compatibility
+    const planType =
+      user?.subscription?.type || user?.subscription?.plan || "free";
+    return planType.toLowerCase();
   };
 
   const isCurrentPlan = (planName) => {
-    return getCurrentPlanName() === planName;
+    const currentPlan = getCurrentPlanName();
+    const checkPlan = planName?.toLowerCase();
+    return currentPlan === checkPlan;
   };
 
   const isDowngrade = (plan) => {
@@ -175,7 +183,7 @@ const UpgradePlans = () => {
                 <span className="text-sm font-medium text-primary-700">
                   Current Plan:{" "}
                   <span className="capitalize">
-                    {user.subscription.type || "Free"}
+                    {user.subscription.type || user.subscription.plan || "Free"}
                   </span>
                 </span>
               </div>

@@ -72,6 +72,20 @@ class SocketService {
       return;
     }
 
+    // Check network status (but allow localhost connections even if navigator.onLine is false)
+    // Note: navigator.onLine can be unreliable, especially for localhost
+    const isLocalhost =
+      SOCKET_IO_URL.includes("localhost") ||
+      SOCKET_IO_URL.includes("127.0.0.1");
+    if (typeof navigator !== "undefined" && !navigator.onLine && !isLocalhost) {
+      logger.warn(
+        "Network appears offline. Skipping Socket.IO connection attempt."
+      );
+      this.isConnected = false;
+      this.isConnecting = false;
+      return;
+    }
+
     // Check connection attempts
     if (this.connectionAttempts >= this.maxConnectionAttempts) {
       logger.error(

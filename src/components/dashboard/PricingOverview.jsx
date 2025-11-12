@@ -137,20 +137,35 @@ const PricingOverview = () => {
             <button
               onClick={() => handleUpgrade(plan._id)}
               className={`w-full py-2 rounded-lg font-medium text-sm transition-colors ${
-                user?.subscription?.type === plan.name
+                (
+                  user?.subscription?.type ||
+                  user?.subscription?.plan ||
+                  "free"
+                ).toLowerCase() === plan.name?.toLowerCase()
                   ? "bg-gray-100 text-gray-500 cursor-not-allowed"
                   : plan.isPopular
                   ? "bg-primary-600 text-white hover:bg-primary-700"
                   : "bg-gray-100 text-gray-700 hover:bg-gray-200"
               }`}
-              disabled={upgrading || user?.subscription?.type === plan.name}
+              disabled={
+                upgrading ||
+                (
+                  user?.subscription?.type ||
+                  user?.subscription?.plan ||
+                  "free"
+                ).toLowerCase() === plan.name?.toLowerCase()
+              }
             >
               {upgrading ? (
                 <span className="flex items-center justify-center gap-2">
                   <Loader className="w-4 h-4 animate-spin" />
                   Processing...
                 </span>
-              ) : user?.subscription?.type === plan.name ? (
+              ) : (
+                  user?.subscription?.type ||
+                  user?.subscription?.plan ||
+                  "free"
+                ).toLowerCase() === plan.name?.toLowerCase() ? (
                 "Current Plan ✓"
               ) : plan.price?.monthly === 0 ? (
                 "Current"
