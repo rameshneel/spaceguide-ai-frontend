@@ -19,12 +19,6 @@ services:
       - NGINX_PORT=80
     env_file:
       - ./.env.dev
-    volumes:
-      # Optional: Mount static files from host (for development)
-      # Uncomment below if you want to serve files from host filesystem
-      # - ./dist:/usr/share/nginx/html:ro
-      # Or mount nginx config for live editing
-      # - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
     networks:
       - frontend-network-dev
 

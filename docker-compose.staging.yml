@@ -19,10 +19,6 @@ services:
       - NGINX_PORT=80
     env_file:
       - ./.env.staging
-    volumes:
-      # Optional: Mount static files from host (for staging)
-      # Uncomment below if you want to serve files from host filesystem
-      # - ./dist:/usr/share/nginx/html:ro
     networks:
       - frontend-network-staging
     logging:
