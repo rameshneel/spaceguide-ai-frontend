@@ -22,10 +22,6 @@ services:
     networks:
       - frontend-network-dev
 
-volumes:
-  # No volumes needed for frontend (static files in image)
-  # Volumes are optional - files are built into Docker image by default
-
 networks:
   frontend-network-dev:
     driver: bridge

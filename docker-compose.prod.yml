@@ -35,10 +35,6 @@ services:
         max-size: "10m"
         max-file: "3"
 
-volumes:
-  # No volumes needed for frontend (static files in image)
-  # Volumes are optional - files are built into Docker image by default
-
 networks:
   frontend-network-prod:
     driver: bridge
