@@ -1,0 +1,62 @@
+name: Deploy to Production
+
+on:
+  workflow_dispatch: # Manual trigger only
+  push:
+    branches: [main]
+    tags:
+      - "v*"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production # Requires approval in GitHub
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to Prod Server
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: ${{ secrets.PROD_USER }}
+          key: ${{ secrets.PROD_SSH_KEY }}
+          port: ${{ secrets.PROD_SSH_PORT || 22 }}
+          script: |
+            set -e
+            cd ${{ secrets.PROD_DEPLOY_PATH || '/opt/spaceguide-ai-frontend' }}
+
+            # Pull latest code
+            git fetch origin
+            git checkout main
+            git pull origin main
+
+            # Create .env.prod if it doesn't exist
+            if [ ! -f .env.prod ]; then
+              cp .env.prod.example .env.prod
+              echo "⚠️  Please update .env.prod with your values"
+            fi
+
+            # Update environment variables in .env.prod
+            if [ -n "${{ secrets.PROD_VITE_API_URL }}" ]; then
+              sed -i "s|VITE_API_URL=.*|VITE_API_URL=${{ secrets.PROD_VITE_API_URL }}|" .env.prod || true
+            fi
+            if [ -n "${{ secrets.PROD_VITE_STRIPE_PUBLISHABLE_KEY }}" ]; then
+              sed -i "s|VITE_STRIPE_PUBLISHABLE_KEY=.*|VITE_STRIPE_PUBLISHABLE_KEY=${{ secrets.PROD_VITE_STRIPE_PUBLISHABLE_KEY }}|" .env.prod || true
+            fi
+
+            # Build and start services
+            docker-compose -p spaceguide-frontend-prod -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+
+            # Wait for health checks
+            sleep 10
+
+            # Check service status
+            docker-compose -p spaceguide-frontend-prod ps
+
+            # Clean up old images
+            docker image prune -f
+
+            # Optional: Send notification
+            echo "✅ Production deployment completed successfully"

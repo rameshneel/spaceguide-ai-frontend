@@ -1,5 +1,7 @@
 # Docker Deployment Guide - SpaceGuide AI Frontend
 
+> **📚 For comprehensive deployment guide with multi-environment setup (dev/staging/prod), see [README.DEPLOYMENT.md](./README.DEPLOYMENT.md)**
+
 ## 🐳 Quick Start
 
 ### Build and Run with Docker

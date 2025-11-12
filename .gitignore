@@ -25,6 +25,9 @@ build
 .env.test.local
 .env.production.local
 .env*.local
+.env.dev
+.env.staging
+.env.prod
 
 # Editor directories and files
 .vscode/*

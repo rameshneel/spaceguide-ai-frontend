@@ -1,0 +1,60 @@
+name: Deploy to Staging
+
+on:
+  push:
+    branches: [staging]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: staging
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to Staging Server
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.STAGING_HOST }}
+          username: ${{ secrets.STAGING_USER }}
+          key: ${{ secrets.STAGING_SSH_KEY }}
+          port: ${{ secrets.STAGING_SSH_PORT || 22 }}
+          script: |
+            set -e
+            cd ${{ secrets.STAGING_DEPLOY_PATH || '/opt/spaceguide-ai-frontend' }}
+
+            # Pull latest code
+            git fetch origin
+            git checkout staging
+            git pull origin staging
+
+            # Create .env.staging if it doesn't exist
+            if [ ! -f .env.staging ]; then
+              cp .env.staging.example .env.staging
+              echo "⚠️  Please update .env.staging with your values"
+            fi
+
+            # Update environment variables in .env.staging
+            if [ -n "${{ secrets.STAGING_VITE_API_URL }}" ]; then
+              sed -i "s|VITE_API_URL=.*|VITE_API_URL=${{ secrets.STAGING_VITE_API_URL }}|" .env.staging || true
+            fi
+            if [ -n "${{ secrets.STAGING_VITE_STRIPE_PUBLISHABLE_KEY }}" ]; then
+              sed -i "s|VITE_STRIPE_PUBLISHABLE_KEY=.*|VITE_STRIPE_PUBLISHABLE_KEY=${{ secrets.STAGING_VITE_STRIPE_PUBLISHABLE_KEY }}|" .env.staging || true
+            fi
+
+            # Build and start services
+            docker-compose -p spaceguide-frontend-staging -f docker-compose.yml -f docker-compose.staging.yml up -d --build
+
+            # Wait for health checks
+            sleep 10
+
+            # Check service status
+            docker-compose -p spaceguide-frontend-staging ps
+
+            # Clean up old images
+            docker image prune -f
+
+            # Optional: Send notification
+            echo "✅ Staging deployment completed successfully"
