@@ -25,6 +25,46 @@ const processQueue = (error, token = null) => {
   failedQueue = [];
 };
 
+const extractValidationMessage = (payload) => {
+  if (!payload || typeof payload !== "object") {
+    return null;
+  }
+
+  if (payload.errors && typeof payload.errors === "object") {
+    const firstErrorWithMessage = Object.values(payload.errors).find(
+      (errorItem) =>
+        errorItem &&
+        typeof errorItem === "object" &&
+        typeof errorItem.message === "string" &&
+        errorItem.message.trim().length > 0
+    );
+
+    if (firstErrorWithMessage?.message) {
+      return firstErrorWithMessage.message;
+    }
+  }
+
+  if (
+    payload.data &&
+    typeof payload.data === "object" &&
+    payload.data !== payload
+  ) {
+    const nestedMessage = extractValidationMessage(payload.data);
+    if (nestedMessage) {
+      return nestedMessage;
+    }
+  }
+
+  if (
+    typeof payload.message === "string" &&
+    payload.message.trim().length > 0
+  ) {
+    return payload.message;
+  }
+
+  return null;
+};
+
 /**
  * Detect network error type and return user-friendly error message
  * Industry best practice: Categorize errors for better UX
@@ -83,9 +123,14 @@ const getNetworkErrorMessage = (error) => {
 
   // HTTP error responses
   const status = error.response.status;
+  const responseData = error.response?.data;
+  const hasBackendMessage =
+    !!extractValidationMessage(responseData) ||
+    (typeof responseData?.message === "string" &&
+      responseData.message.trim().length > 0);
 
   // Server errors (5xx)
-  if (status >= 500) {
+  if (status >= 500 && !hasBackendMessage) {
     return {
       message: ERROR_MESSAGES.SERVER_DOWN,
       type: "SERVER_ERROR",
@@ -94,7 +139,7 @@ const getNetworkErrorMessage = (error) => {
   }
 
   // Gateway timeout
-  if (status === 504) {
+  if (status === 504 && !hasBackendMessage) {
     return {
       message: ERROR_MESSAGES.REQUEST_TIMEOUT,
       type: "TIMEOUT",
@@ -103,7 +148,7 @@ const getNetworkErrorMessage = (error) => {
   }
 
   // Service unavailable
-  if (status === 503) {
+  if (status === 503 && !hasBackendMessage) {
     return {
       message: ERROR_MESSAGES.SERVER_DOWN,
       type: "SERVICE_UNAVAILABLE",
@@ -390,8 +435,12 @@ api.interceptors.response.use(
       });
     } else {
       // Use backend error message or fallback
+      const responseData = error.response?.data;
+      const validationMessage = extractValidationMessage(responseData);
+
       message =
-        error.response?.data?.message ||
+        validationMessage ||
+        responseData?.message ||
         error.message ||
         ERROR_MESSAGES.SOMETHING_WENT_WRONG;
       errorType = error.response?.status
